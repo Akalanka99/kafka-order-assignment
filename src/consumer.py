@@ -8,6 +8,7 @@ import random
 import time
 
 from confluent_kafka import DeserializingConsumer, SerializingProducer
+from confluent_kafka.error import ConsumeError
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
 from confluent_kafka.serialization import StringDeserializer, StringSerializer
@@ -124,7 +125,12 @@ def main():
 
     try:
         while True:
-            msg = consumer.poll(1.0)
+            try:
+                msg = consumer.poll(1.0)
+            except ConsumeError as e:
+                # e.g. topic not yet created on the broker - transient, keep polling
+                print(f"[consumer] poll error: {e}")
+                continue
             if msg is None:
                 continue
             if msg.error():
